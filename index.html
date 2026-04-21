@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>LeadGoat Command Center · v5</title>
+<style>
+  :root {
+    --bg:#0a0e14; --card:#11161d; --line:#1f2830; --txt:#e8edf2; --muted:#8a97a5;
+    --good:#35d07f; --warn:#f7b955; --bad:#ef4444; --accent:#8ab4f8;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.5 ui-sans-serif, system-ui, -apple-system, "SF Pro Text", Inter, sans-serif; }
+  header { padding:20px 24px; display:flex; align-items:baseline; gap:16px; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:18px; font-weight:600; letter-spacing:0.3px; }
+  header .small { color:var(--muted); font-size:12px; }
+  main { padding:20px 24px; display:grid; gap:20px; max-width:1400px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
+  .panel h2 { margin:0 0 14px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; }
+  .row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; }
+  .kpi { background:#0f141b; border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
+  .kpi .lbl { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+  .kpi .val { font-size:22px; font-weight:600; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .kpi .sub { color:var(--muted); font-size:11px; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .kpi.good .val { color:var(--good); }
+  .kpi.warn .val { color:var(--warn); }
+  .kpi.bad .val { color:var(--bad); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; }
+  th { color:var(--muted); font-weight:500; text-transform:uppercase; font-size:11px; letter-spacing:1px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .pill.delivered { background:rgba(53,208,127,.1); color:var(--good); }
+  .pill.opened { background:rgba(138,180,248,.1); color:var(--accent); }
+  .pill.clicked { background:rgba(247,185,85,.1); color:var(--warn); }
+  .pill.bounced, .pill.hard_bounce, .pill.spam, .pill.blocked { background:rgba(239,68,68,.1); color:var(--bad); }
+  .pill.sent, .pill.soft_bounce, .pill.deferred { background:rgba(138,151,165,.1); color:var(--muted); }
+  .pill.unsubscribed { background:rgba(247,185,85,.1); color:var(--warn); }
+  .gate-open { color:var(--good); font-weight:600; }
+  .gate-closed { color:var(--bad); font-weight:600; }
+  .muted { color:var(--muted); }
+  .error { color:var(--bad); font-size:12px; padding:8px 12px; background:rgba(239,68,68,.08); border-radius:6px; }
+  .stale { color:var(--warn); }
+  .tabs { display:flex; gap:4px; margin-bottom:12px; }
+  .tab { padding:6px 12px; background:#0f141b; border:1px solid var(--line); border-radius:6px; font-size:12px; cursor:pointer; color:var(--muted); }
+  .tab.active { background:#1a2330; color:var(--txt); border-color:var(--accent); }
+  .rate { font-size:12px; color:var(--muted); margin-top:2px; }
+  .hint { font-size:11px; color:var(--muted); margin-top:8px; font-style:italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐐 LeadGoat Command Center</h1>
+  <span class="small">v5 · booksgoat.com · <span id="clock"></span></span>
+  <span class="small" style="margin-left:auto;" id="status">connecting…</span>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>System State</h2>
+    <div class="row" id="state">
+      <div class="kpi"><div class="lbl">Preflight gate</div><div class="val muted" id="gate">—</div><div class="sub" id="gate-reason"></div></div>
+      <div class="kpi"><div class="lbl">Warmup day</div><div class="val" id="warmup-day">—</div><div class="sub" id="warmup-cap"></div></div>
+      <div class="kpi"><div class="lbl">Bounce rate (24h)</div><div class="val" id="bounce-24h">—</div><div class="sub">max 2.00%</div></div>
+      <div class="kpi"><div class="lbl">Brevo credits</div><div class="val" id="credits">—</div><div class="sub">remaining</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Brevo — authoritative send numbers</h2>
+    <div class="tabs">
+      <button class="tab active" data-range="d1">Last 24h</button>
+      <button class="tab" data-range="d7">Last 7d</button>
+      <button class="tab" data-range="d30">Last 30d</button>
+      <button class="tab" data-range="all">All time</button>
+    </div>
+    <div class="row" id="brevo-kpis">
+      <div class="kpi"><div class="lbl">Requests</div><div class="val" id="brevo-requests">—</div></div>
+      <div class="kpi good"><div class="lbl">Delivered</div><div class="val" id="brevo-delivered">—</div><div class="rate" id="brevo-delivered-rate"></div></div>
+      <div class="kpi bad"><div class="lbl">Hard bounces</div><div class="val" id="brevo-hard">—</div><div class="rate" id="brevo-hard-rate"></div></div>
+      <div class="kpi warn"><div class="lbl">Unique opens</div><div class="val" id="brevo-opens">—</div><div class="rate" id="brevo-opens-rate"></div></div>
+      <div class="kpi" style="border-color:rgba(138,180,248,.3);"><div class="lbl">Unique clicks</div><div class="val" id="brevo-clicks" style="color:var(--accent)">—</div><div class="rate" id="brevo-clicks-rate"></div></div>
+      <div class="kpi bad"><div class="lbl">Spam reports</div><div class="val" id="brevo-spam">—</div><div class="rate" id="brevo-spam-rate"></div></div>
+    </div>
+    <div class="hint">Brevo cannot tell Inbox vs Promotions vs Spam folder. That requires GlockApps seed testing. Brevo can only confirm: did the receiving server accept the email (delivered) or reject it (bounce).</div>
+    <div class="hint" id="brevo-refreshed"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Our System — Supabase event log (this system only)</h2>
+    <div class="row" id="system-kpis">
+      <div class="kpi"><div class="lbl">Leads</div><div class="val" id="leads-total">—</div><div class="sub" id="leads-sub"></div></div>
+      <div class="kpi"><div class="lbl">Sent (this system)</div><div class="val" id="sent-total">—</div></div>
+      <div class="kpi good"><div class="lbl">Delivered</div><div class="val" id="delivered-total">—</div></div>
+      <div class="kpi warn"><div class="lbl">Opens</div><div class="val" id="opens-total">—</div></div>
+      <div class="kpi" style="border-color:rgba(138,180,248,.3);"><div class="lbl">Clicks</div><div class="val" id="clicks-total" style="color:var(--accent)">—</div></div>
+      <div class="kpi"><div class="lbl">Unsubs</div><div class="val" id="unsubs-total">—</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Recent events (last 20)</h2>
+    <div style="overflow-x:auto;">
+      <table id="events">
+        <thead><tr><th>Time</th><th>Event</th><th>Lead</th><th>Campaign</th><th>Institution</th></tr></thead>
+        <tbody id="events-body"><tr><td colspan="5" class="muted">loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>What we cannot measure from here</h2>
+    <div class="muted" style="font-size:13px; line-height:1.8;">
+      <div>• <b>Inbox / Promotions / Spam folder placement</b> — only Gmail &amp; Outlook see this. Add GlockApps seed testing to measure.</div>
+      <div>• <b>Website visits from emails</b> — requires UTM tags on outbound links + Cloudflare Web Analytics or GA4.</div>
+      <div>• <b>Orders attributed to email</b> — requires UTM tags + OpenCart order attribution wiring.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ---- CONFIG: set these once ----
+  const SUPABASE_URL = "https://pzbwrzzcfomuphxujnzk.supabase.co";
+  const SUPABASE_ANON = "sb_publishable_uIkTCAFUtzQ-4a2p-rotmg_aCZpS9Kt";
+  const REFRESH_MS = 30_000;
+
+  const EVENT_LABEL = {
+    sent:'sent', delivered:'delivered', opened:'opened', clicked:'clicked',
+    hard_bounce:'hard bounce', soft_bounce:'soft bounce', spam:'spam',
+    blocked:'blocked', unsubscribed:'unsubscribed', invalid_email:'invalid', deferred:'deferred'
+  };
+
+  let brevoData = null;
+  let currentRange = 'd1';
+
+  function $(id) { return document.getElementById(id); }
+  function fmt(n) { return (n === null || n === undefined) ? '—' : Number(n).toLocaleString(); }
+  function pct(num, denom) { if (!denom) return ''; return ((num/denom)*100).toFixed(2) + '%'; }
+
+  function tick() {
+    $('clock').textContent = new Date().toLocaleString();
+  }
+  tick(); setInterval(tick, 1000);
+
+  async function callRpc(fn, args) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method:'POST',
+      headers:{
+        'apikey': SUPABASE_ANON,
+        'authorization': `Bearer ${SUPABASE_ANON}`,
+        'content-type': 'application/json',
+        'prefer': 'params=single-object'
+      },
+      body: JSON.stringify(args || {})
+    });
+    if (!res.ok) throw new Error(`${fn}: ${res.status} ${await res.text()}`);
+    return res.json();
+  }
+
+  function renderBrevo() {
+    if (!brevoData) return;
+    const r = currentRange;
+    const req = brevoData[r + '_requests'] || 0;
+    const del = brevoData[r + '_delivered'] || 0;
+    const hb  = brevoData[r + '_hard_bounces'] || 0;
+    const opens = brevoData[r + '_unique_opens'] || 0;
+    const clicks = brevoData[r + '_unique_clicks'] || 0;
+    const spam = brevoData[r + '_spam_reports'] || 0;
+
+    $('brevo-requests').textContent = fmt(req);
+    $('brevo-delivered').textContent = fmt(del);
+    $('brevo-delivered-rate').textContent = req ? pct(del, req) + ' of requested' : '';
+    $('brevo-hard').textContent = fmt(hb);
+    $('brevo-hard-rate').textContent = req ? pct(hb, req) + ' of requested' : '';
+    $('brevo-opens').textContent = fmt(opens);
+    $('brevo-opens-rate').textContent = del ? pct(opens, del) + ' of delivered' : '';
+    $('brevo-clicks').textContent = fmt(clicks);
+    $('brevo-clicks-rate').textContent = del ? pct(clicks, del) + ' of delivered' : '';
+    $('brevo-spam').textContent = fmt(spam);
+    $('brevo-spam-rate').textContent = del ? pct(spam, del) + ' of delivered' : '';
+
+    if (brevoData.refreshed_at) {
+      const age = Math.round((Date.now() - new Date(brevoData.refreshed_at).getTime()) / 60000);
+      $('brevo-refreshed').textContent = `Data refreshed ${age} minute(s) ago from Brevo API`;
+      if (age > 15) $('brevo-refreshed').classList.add('stale'); else $('brevo-refreshed').classList.remove('stale');
+    }
+    if (brevoData.credits_remaining !== undefined) {
+      $('credits').textContent = fmt(brevoData.credits_remaining);
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      currentRange = t.dataset.range;
+      renderBrevo();
+    });
+  });
+
+  async function refresh() {
+    $('status').textContent = 'loading…';
+    try {
+      // 1. Dashboard KPIs (Supabase)
+      const kpiResult = await callRpc('dashboard_kpis', {});
+      const kpis = Array.isArray(kpiResult) ? kpiResult[0] : kpiResult;
+      if (kpis) {
+        $('gate').textContent = kpis.gate_open ? 'OPEN' : 'CLOSED';
+        $('gate').className = 'val ' + (kpis.gate_open ? 'gate-open' : 'gate-closed');
+        $('gate-reason').textContent = kpis.gate_reason || '';
+        $('warmup-day').textContent = kpis.warmup_day ?? '—';
+        $('warmup-cap').textContent = `cap: ${fmt(kpis.daily_cap)}`;
+        $('bounce-24h').textContent = (kpis.bounce_rate_24h ?? 0).toFixed(2) + '%';
+        $('leads-total').textContent = fmt(kpis.leads_total);
+        $('leads-sub').textContent = `${fmt(kpis.leads_verified)} verified`;
+        $('sent-total').textContent = fmt(kpis.sent_count);
+        $('delivered-total').textContent = fmt(kpis.delivered_count);
+        $('opens-total').textContent = fmt(kpis.opened_count);
+        $('clicks-total').textContent = fmt(kpis.clicked_count);
+        $('unsubs-total').textContent = fmt(kpis.unsubscribed_count);
+      }
+
+      // 2. Recent events
+      const eventsResult = await callRpc('recent_events', { limit_count: 20 });
+      const events = Array.isArray(eventsResult) ? eventsResult : (eventsResult ? [eventsResult] : []);
+      const body = $('events-body');
+      body.innerHTML = '';
+      if (!events || events.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" class="muted">No events yet — system hasn\'t sent its first email.</td></tr>';
+      } else {
+        for (const e of events) {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${new Date(e.ts).toLocaleString()}</td>
+            <td><span class="pill ${e.event_type}">${EVENT_LABEL[e.event_type] || e.event_type}</span></td>
+            <td>${e.email || '—'}</td>
+            <td>${e.campaign_slug || '—'}</td>
+            <td>${e.institution_category || '—'}</td>
+          `;
+          body.appendChild(row);
+        }
+      }
+
+      // 3. Brevo stats
+      try {
+        const bsResult = await callRpc('brevo_stats_read', {});
+        const bs = Array.isArray(bsResult) ? bsResult[0] : bsResult;
+        if (bs) {
+          brevoData = bs;
+          renderBrevo();
+        }
+      } catch (e) {
+        console.warn('brevo_stats_read not available yet (run migration 005):', e.message);
+      }
+
+      $('status').textContent = 'live · updated ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      $('status').innerHTML = `<span class="error">error: ${e.message}</span>`;
+      console.error(e);
+    }
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>
