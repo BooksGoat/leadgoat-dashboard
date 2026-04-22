@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>LeadGoat Command Center · v5</title>
+<title>LeadGoat Command Center · v6</title>
 <style>
   :root {
     --bg:#0a0e14; --card:#11161d; --line:#1f2830; --txt:#e8edf2; --muted:#8a97a5;
@@ -13,9 +13,18 @@
   header { padding:20px 24px; display:flex; align-items:baseline; gap:16px; border-bottom:1px solid var(--line); }
   header h1 { margin:0; font-size:18px; font-weight:600; letter-spacing:0.3px; }
   header .small { color:var(--muted); font-size:12px; }
+
+  nav.main-nav { display:flex; gap:2px; padding:0 24px; border-bottom:1px solid var(--line); background:#0c1117; }
+  nav.main-nav button { padding:12px 18px; background:transparent; border:none; border-bottom:2px solid transparent; color:var(--muted); font-size:13px; font-weight:500; cursor:pointer; letter-spacing:0.3px; }
+  nav.main-nav button:hover { color:var(--txt); }
+  nav.main-nav button.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+  .view { display:none; }
+  .view.active { display:block; }
   main { padding:20px 24px; display:grid; gap:20px; max-width:1400px; }
   .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px; }
   .panel h2 { margin:0 0 14px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:1.2px; font-weight:600; }
+  .panel h2 .badge { background:rgba(138,180,248,.1); color:var(--accent); padding:2px 8px; border-radius:10px; font-size:10px; margin-left:8px; letter-spacing:0.5px; }
   .row { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; }
   .kpi { background:#0f141b; border:1px solid var(--line); border-radius:8px; padding:12px 14px; }
   .kpi .lbl { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
@@ -28,11 +37,11 @@
   th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; }
   th { color:var(--muted); font-weight:500; text-transform:uppercase; font-size:11px; letter-spacing:1px; }
   .pill { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
-  .pill.delivered { background:rgba(53,208,127,.1); color:var(--good); }
+  .pill.delivered, .pill.inbox { background:rgba(53,208,127,.1); color:var(--good); }
   .pill.opened { background:rgba(138,180,248,.1); color:var(--accent); }
-  .pill.clicked { background:rgba(247,185,85,.1); color:var(--warn); }
+  .pill.clicked, .pill.promotions { background:rgba(247,185,85,.1); color:var(--warn); }
   .pill.bounced, .pill.hard_bounce, .pill.spam, .pill.blocked { background:rgba(239,68,68,.1); color:var(--bad); }
-  .pill.sent, .pill.soft_bounce, .pill.deferred { background:rgba(138,151,165,.1); color:var(--muted); }
+  .pill.sent, .pill.soft_bounce, .pill.deferred, .pill.queued, .pill.not_received { background:rgba(138,151,165,.1); color:var(--muted); }
   .pill.unsubscribed { background:rgba(247,185,85,.1); color:var(--warn); }
   .gate-open { color:var(--good); font-weight:600; }
   .gate-closed { color:var(--bad); font-weight:600; }
@@ -44,15 +53,60 @@
   .tab.active { background:#1a2330; color:var(--txt); border-color:var(--accent); }
   .rate { font-size:12px; color:var(--muted); margin-top:2px; }
   .hint { font-size:11px; color:var(--muted); margin-top:8px; font-style:italic; }
+
+  /* Seed Lab */
+  .btn { padding:7px 14px; background:#1a2330; border:1px solid var(--line); border-radius:6px; color:var(--txt); font-size:12px; cursor:pointer; font-weight:500; letter-spacing:0.2px; }
+  .btn:hover { border-color:var(--accent); }
+  .btn.primary { background:var(--accent); color:#0a0e14; border-color:var(--accent); font-weight:600; }
+  .btn.primary:hover { background:#a8c5fa; }
+  .btn.danger { background:transparent; border-color:rgba(239,68,68,.3); color:var(--bad); }
+  .btn.ghost { background:transparent; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .btn-sm { padding:4px 10px; font-size:11px; }
+  .btn-group { display:flex; gap:6px; }
+  .btn-group .btn { border-radius:4px; }
+  .input, .textarea { width:100%; padding:8px 10px; background:#0f141b; border:1px solid var(--line); border-radius:6px; color:var(--txt); font:13px/1.5 ui-sans-serif, system-ui, monospace; }
+  .input:focus, .textarea:focus { outline:none; border-color:var(--accent); }
+  .textarea { font-family:ui-monospace, "SF Mono", Monaco, monospace; font-size:12px; resize:vertical; }
+  .lock-banner { background:rgba(247,185,85,.08); border:1px solid rgba(247,185,85,.3); border-radius:8px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .lock-banner .msg { color:var(--warn); font-size:13px; font-weight:500; }
+  .seed-controls { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .placement-btns { display:flex; gap:4px; }
+  .placement-btn { padding:3px 8px; font-size:10px; font-weight:600; border-radius:4px; border:1px solid var(--line); background:#0f141b; color:var(--muted); cursor:pointer; letter-spacing:0.5px; }
+  .placement-btn:hover { border-color:var(--accent); color:var(--txt); }
+  .placement-btn.selected.inbox { background:rgba(53,208,127,.15); color:var(--good); border-color:var(--good); }
+  .placement-btn.selected.promotions { background:rgba(247,185,85,.15); color:var(--warn); border-color:var(--warn); }
+  .placement-btn.selected.spam { background:rgba(239,68,68,.15); color:var(--bad); border-color:var(--bad); }
+  .placement-btn.selected.not_received { background:rgba(138,151,165,.15); color:var(--muted); border-color:var(--muted); }
+  .run-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+  .field-label { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:600; }
+  .dialog-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:50; }
+  .dialog-backdrop.open { display:flex; }
+  .dialog { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:20px; width:520px; max-width:90vw; max-height:80vh; overflow:auto; }
+  .dialog h3 { margin:0 0 14px; font-size:14px; letter-spacing:0.3px; }
+  .dialog-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+  .toast { position:fixed; bottom:20px; right:20px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 16px; font-size:12px; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,.4); }
+  .toast.good { border-color:var(--good); color:var(--good); }
+  .toast.bad { border-color:var(--bad); color:var(--bad); }
+  @media (max-width:768px) {
+    .run-grid { grid-template-columns:1fr; }
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>🐐 LeadGoat Command Center</h1>
-  <span class="small">v5 · booksgoat.com · <span id="clock"></span></span>
+  <span class="small">v6 · booksgoat.com · <span id="clock"></span></span>
   <span class="small" style="margin-left:auto;" id="status">connecting…</span>
 </header>
 
+<nav class="main-nav">
+  <button data-view="overview" class="active">Overview</button>
+  <button data-view="seed-lab">Seed Lab</button>
+</nav>
+
+<!-- =========================== OVERVIEW VIEW =========================== -->
+<div id="view-overview" class="view active">
 <main>
   <section class="panel">
     <h2>System State</h2>
@@ -80,7 +134,7 @@
       <div class="kpi" style="border-color:rgba(138,180,248,.3);"><div class="lbl">Unique clicks</div><div class="val" id="brevo-clicks" style="color:var(--accent)">—</div><div class="rate" id="brevo-clicks-rate"></div></div>
       <div class="kpi bad"><div class="lbl">Spam reports</div><div class="val" id="brevo-spam">—</div><div class="rate" id="brevo-spam-rate"></div></div>
     </div>
-    <div class="hint">Brevo cannot tell Inbox vs Promotions vs Spam folder. That requires GlockApps seed testing. Brevo can only confirm: did the receiving server accept the email (delivered) or reject it (bounce).</div>
+    <div class="hint">Brevo cannot tell Inbox vs Promotions vs Spam folder. That requires seed testing (see Seed Lab tab). Brevo only confirms: did the receiving server accept the email (delivered) or reject it (bounce).</div>
     <div class="hint" id="brevo-refreshed"></div>
   </section>
 
@@ -109,17 +163,152 @@
   <section class="panel">
     <h2>What we cannot measure from here</h2>
     <div class="muted" style="font-size:13px; line-height:1.8;">
-      <div>• <b>Inbox / Promotions / Spam folder placement</b> — only Gmail &amp; Outlook see this. Add GlockApps seed testing to measure.</div>
+      <div>• <b>Inbox / Promotions / Spam folder placement</b> — only Gmail &amp; Outlook see this. Use the Seed Lab tab to measure placement across your own inboxes.</div>
       <div>• <b>Website visits from emails</b> — requires UTM tags on outbound links + Cloudflare Web Analytics or GA4.</div>
       <div>• <b>Orders attributed to email</b> — requires UTM tags + OpenCart order attribution wiring.</div>
     </div>
   </section>
 </main>
+</div>
+
+<!-- =========================== SEED LAB VIEW =========================== -->
+<div id="view-seed-lab" class="view">
+<main>
+
+  <div id="lock-banner" class="lock-banner" style="display:none;">
+    <div class="msg">Seed Lab is locked — enter your magic key to manage seeds and run tests.</div>
+    <button class="btn primary" onclick="SeedLab.promptKey()">Enter key</button>
+  </div>
+
+  <section class="panel">
+    <h2>Seed Lab — Summary</h2>
+    <div class="row">
+      <div class="kpi"><div class="lbl">Active seeds</div><div class="val" id="sl-seeds-total">—</div><div class="sub" id="sl-seeds-breakdown"></div></div>
+      <div class="kpi"><div class="lbl">Last run</div><div class="val" id="sl-last-run">—</div><div class="sub" id="sl-last-run-time"></div></div>
+      <div class="kpi good"><div class="lbl">Inbox</div><div class="val" id="sl-pct-inbox">—</div><div class="rate" id="sl-pct-inbox-n"></div></div>
+      <div class="kpi warn"><div class="lbl">Promotions</div><div class="val" id="sl-pct-promo">—</div><div class="rate" id="sl-pct-promo-n"></div></div>
+      <div class="kpi bad"><div class="lbl">Spam</div><div class="val" id="sl-pct-spam">—</div><div class="rate" id="sl-pct-spam-n"></div></div>
+      <div class="kpi"><div class="lbl">Delivery</div><div class="val" id="sl-pct-deliv">—</div><div class="rate" id="sl-pct-deliv-n"></div></div>
+    </div>
+    <div class="hint">Seed Lab sends your current campaign template to a controlled list of your own inboxes across providers. You mark where each one landed. Result: a real placement rate grounded in actual inboxes — the one number Brevo cannot give you.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Seed Inboxes <span class="badge" id="sl-seed-count">0</span></h2>
+    <div class="seed-controls">
+      <button class="btn primary" onclick="SeedLab.bulkAdd()">Bulk add</button>
+      <button class="btn" onclick="SeedLab.addOne()">Add one</button>
+      <button class="btn ghost" onclick="SeedLab.refreshSeeds()">Refresh</button>
+      <span style="flex:1;"></span>
+      <span class="muted" style="font-size:11px;" id="sl-seeds-status"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Email</th><th>Provider</th><th>Added</th><th></th></tr></thead>
+        <tbody id="sl-seeds-body"><tr><td colspan="4" class="muted">loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Run Seed Test</h2>
+    <div class="run-grid">
+      <div>
+        <span class="field-label">Campaign ID</span>
+        <input class="input" id="sl-campaign-id" value="institutional_intro_v3" />
+      </div>
+      <div>
+        <span class="field-label">Template version</span>
+        <input class="input" id="sl-template-version" value="v3.2" />
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <span class="field-label">Subject line</span>
+      <input class="input" id="sl-subject" value="Book procurement partnership — BooksGoat" />
+    </div>
+    <div style="margin-bottom:14px;">
+      <span class="field-label">HTML body</span>
+      <textarea class="textarea" id="sl-html" rows="8" placeholder="Paste your rendered HTML template here. Must include {{unsubscribe_url}} if your template uses it."></textarea>
+    </div>
+    <div style="margin-bottom:14px;">
+      <span class="field-label">Plain-text body</span>
+      <textarea class="textarea" id="sl-text" rows="5" placeholder="Plain-text fallback version."></textarea>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button class="btn primary" onclick="SeedLab.run()">Run Seed Test</button>
+      <span class="muted" style="font-size:12px;" id="sl-run-status"></span>
+    </div>
+    <div class="hint">Clicking Run will send one message per active seed inbox using Brevo. Each message is tagged with a unique run code so placements can be tracked individually.</div>
+  </section>
+
+  <section class="panel" id="sl-results-panel">
+    <h2>Current Run — Results</h2>
+    <div id="sl-run-info" style="margin-bottom:12px; font-size:12px; color:var(--muted);">No runs yet.</div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Email</th><th>Provider</th><th>Delivery</th><th style="width:260px;">Placement</th></tr></thead>
+        <tbody id="sl-placements-body"><tr><td colspan="4" class="muted">—</td></tr></tbody>
+      </table>
+    </div>
+    <div class="hint">Keyboard shortcuts when focused on a row: <b>I</b> Inbox · <b>P</b> Promotions · <b>S</b> Spam · <b>N</b> Not received</div>
+  </section>
+
+  <section class="panel">
+    <h2>History (last 20 runs)</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Run</th><th>Campaign</th><th>Subject</th><th>Started</th><th>Sent</th><th>Inbox %</th><th>Promo %</th><th>Spam %</th></tr></thead>
+        <tbody id="sl-history-body"><tr><td colspan="8" class="muted">—</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<!-- key entry dialog -->
+<div class="dialog-backdrop" id="sl-key-dialog">
+  <div class="dialog">
+    <h3>Enter Seed Lab magic key</h3>
+    <div class="muted" style="font-size:12px; margin-bottom:10px;">The key is stored only in this browser's local storage — not sent to Supabase.</div>
+    <input class="input" id="sl-key-input" type="password" placeholder="64-character hex key" />
+    <div class="dialog-actions">
+      <button class="btn ghost" onclick="SeedLab.closeDialog('sl-key-dialog')">Cancel</button>
+      <button class="btn primary" onclick="SeedLab.saveKey()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- bulk add dialog -->
+<div class="dialog-backdrop" id="sl-bulk-dialog">
+  <div class="dialog">
+    <h3>Bulk add seed inboxes</h3>
+    <div class="muted" style="font-size:12px; margin-bottom:10px;">Paste emails separated by newline, comma, space, or semicolon. Duplicates are ignored.</div>
+    <textarea class="textarea" id="sl-bulk-input" rows="10" placeholder="alice@gmail.com&#10;bob@outlook.com&#10;seeder1@yahoo.com"></textarea>
+    <div class="dialog-actions">
+      <button class="btn ghost" onclick="SeedLab.closeDialog('sl-bulk-dialog')">Cancel</button>
+      <button class="btn primary" onclick="SeedLab.submitBulk()">Add all</button>
+    </div>
+  </div>
+</div>
+
+<!-- add one dialog -->
+<div class="dialog-backdrop" id="sl-one-dialog">
+  <div class="dialog">
+    <h3>Add one seed inbox</h3>
+    <input class="input" id="sl-one-input" placeholder="name@domain.com" />
+    <div class="dialog-actions">
+      <button class="btn ghost" onclick="SeedLab.closeDialog('sl-one-dialog')">Cancel</button>
+      <button class="btn primary" onclick="SeedLab.submitOne()">Add</button>
+    </div>
+  </div>
+</div>
 
 <script>
   // ---- CONFIG: set these once ----
   const SUPABASE_URL = "https://pzbwrzzcfomuphxujnzk.supabase.co";
   const SUPABASE_ANON = "sb_publishable_uIkTCAFUtzQ-4a2p-rotmg_aCZpS9Kt";
+  const RAILWAY_BASE = "https://booksgoat-leadgoat-production.up.railway.app";
   const REFRESH_MS = 30_000;
 
   const EVENT_LABEL = {
@@ -134,10 +323,15 @@
   function $(id) { return document.getElementById(id); }
   function fmt(n) { return (n === null || n === undefined) ? '—' : Number(n).toLocaleString(); }
   function pct(num, denom) { if (!denom) return ''; return ((num/denom)*100).toFixed(2) + '%'; }
-
-  function tick() {
-    $('clock').textContent = new Date().toLocaleString();
+  function toast(msg, kind) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (kind || '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
   }
+
+  function tick() { $('clock').textContent = new Date().toLocaleString(); }
   tick(); setInterval(tick, 1000);
 
   async function callRpc(fn, args) {
@@ -187,6 +381,7 @@
     }
   }
 
+  // Brevo range tabs (inside Overview panel)
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -196,10 +391,21 @@
     });
   });
 
+  // Main nav view switching
+  document.querySelectorAll('nav.main-nav button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('nav.main-nav button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      const view = b.dataset.view;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      $('view-' + view).classList.add('active');
+      if (view === 'seed-lab') SeedLab.init();
+    });
+  });
+
   async function refresh() {
     $('status').textContent = 'loading…';
     try {
-      // 1. Dashboard KPIs (Supabase)
       const kpiResult = await callRpc('dashboard_kpis', {});
       const kpis = Array.isArray(kpiResult) ? kpiResult[0] : kpiResult;
       if (kpis) {
@@ -218,7 +424,6 @@
         $('unsubs-total').textContent = fmt(kpis.unsubscribed_count);
       }
 
-      // 2. Recent events
       const eventsResult = await callRpc('recent_events', { limit_count: 20 });
       const events = Array.isArray(eventsResult) ? eventsResult : (eventsResult ? [eventsResult] : []);
       const body = $('events-body');
@@ -239,16 +444,12 @@
         }
       }
 
-      // 3. Brevo stats
       try {
         const bsResult = await callRpc('brevo_stats_read', {});
         const bs = Array.isArray(bsResult) ? bsResult[0] : bsResult;
-        if (bs) {
-          brevoData = bs;
-          renderBrevo();
-        }
+        if (bs) { brevoData = bs; renderBrevo(); }
       } catch (e) {
-        console.warn('brevo_stats_read not available yet (run migration 005):', e.message);
+        console.warn('brevo_stats_read not available:', e.message);
       }
 
       $('status').textContent = 'live · updated ' + new Date().toLocaleTimeString();
@@ -260,6 +461,243 @@
 
   refresh();
   setInterval(refresh, REFRESH_MS);
+
+  // ============================ SEED LAB ============================
+  const SeedLab = (() => {
+    const KEY_STORAGE = 'leadgoat.seedLabKey';
+    let initialized = false;
+    let currentRun = null;
+
+    function getKey() { return localStorage.getItem(KEY_STORAGE) || ''; }
+    function hasKey() { return !!getKey(); }
+    function updateLock() {
+      $('lock-banner').style.display = hasKey() ? 'none' : 'flex';
+    }
+
+    async function api(path, opts = {}) {
+      const headers = { 'content-type': 'application/json', ...(opts.headers || {}) };
+      if (opts.authed && hasKey()) headers['x-seed-lab-key'] = getKey();
+      const res = await fetch(RAILWAY_BASE + path, { ...opts, headers });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || `${res.status}`);
+      return j;
+    }
+
+    async function init() {
+      if (initialized) { refreshAll(); return; }
+      initialized = true;
+      updateLock();
+      await refreshAll();
+    }
+
+    async function refreshAll() {
+      await Promise.allSettled([ refreshSeeds(), refreshStatus(), refreshHistory() ]);
+    }
+
+    async function refreshSeeds() {
+      try {
+        $('sl-seeds-status').textContent = 'loading…';
+        const { seeds } = await api('/seed-test/seeds');
+        const body = $('sl-seeds-body');
+        body.innerHTML = '';
+        if (!seeds || !seeds.length) {
+          body.innerHTML = '<tr><td colspan="4" class="muted">No seeds added yet — click Bulk add to paste your list.</td></tr>';
+        } else {
+          for (const s of seeds) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="font-family:ui-monospace,monospace;">${s.email}</td>
+              <td><span class="pill ${s.provider}">${s.provider}</span></td>
+              <td class="muted">${new Date(s.added_at).toLocaleDateString()}</td>
+              <td style="text-align:right;"><button class="btn btn-sm danger" onclick="SeedLab.removeSeed('${s.email}')">Remove</button></td>
+            `;
+            body.appendChild(tr);
+          }
+        }
+        $('sl-seed-count').textContent = seeds ? seeds.length : 0;
+        $('sl-seeds-total').textContent = fmt(seeds ? seeds.length : 0);
+        const breakdown = {};
+        (seeds || []).forEach(s => breakdown[s.provider] = (breakdown[s.provider] || 0) + 1);
+        $('sl-seeds-breakdown').textContent = Object.entries(breakdown).map(([p,n]) => `${p}:${n}`).join(' · ') || '—';
+        $('sl-seeds-status').textContent = '';
+      } catch (e) {
+        $('sl-seeds-status').innerHTML = `<span class="error">${e.message}</span>`;
+      }
+    }
+
+    async function refreshStatus() {
+      try {
+        const { run, placements } = await api('/seed-test/status');
+        currentRun = run;
+        if (!run) {
+          $('sl-run-info').textContent = 'No runs yet. Paste your template below and click Run Seed Test.';
+          $('sl-placements-body').innerHTML = '<tr><td colspan="4" class="muted">—</td></tr>';
+          ['sl-last-run','sl-last-run-time','sl-pct-inbox','sl-pct-promo','sl-pct-spam','sl-pct-deliv'].forEach(id => $(id).textContent = '—');
+          return;
+        }
+        const startedAge = Math.round((Date.now() - new Date(run.started_at).getTime()) / 60000);
+        $('sl-last-run').textContent = run.run_code;
+        $('sl-last-run-time').textContent = startedAge < 60 ? `${startedAge} min ago` : new Date(run.started_at).toLocaleDateString();
+        $('sl-run-info').innerHTML = `
+          <b>${run.run_code}</b> · ${run.campaign_id} · subject "${run.subject_line}"
+          <span class="muted"> · started ${new Date(run.started_at).toLocaleString()}</span>
+          <span class="muted"> · ${run.seed_count} seeds · ${run.delivered_count || 0} delivered · ${run.bounced_count || 0} bounced</span>
+        `;
+        const body = $('sl-placements-body');
+        body.innerHTML = '';
+        const counts = { inbox:0, promotions:0, spam:0, not_received:0, marked:0 };
+        for (const p of placements) {
+          if (p.placement) { counts[p.placement] = (counts[p.placement] || 0) + 1; counts.marked++; }
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="font-family:ui-monospace,monospace;">${p.seed_email}</td>
+            <td><span class="pill ${p.provider}">${p.provider}</span></td>
+            <td><span class="pill ${p.delivery || 'queued'}">${p.delivery || 'queued'}</span></td>
+            <td>
+              <div class="placement-btns">
+                ${['inbox','promotions','spam','not_received'].map(pl =>
+                  `<button class="placement-btn ${pl} ${p.placement === pl ? 'selected' : ''}" onclick="SeedLab.mark('${p.seed_email}','${pl}')">${pl === 'not_received' ? 'N/R' : pl[0].toUpperCase() + pl.slice(1)}</button>`
+                ).join('')}
+              </div>
+            </td>
+          `;
+          body.appendChild(tr);
+        }
+        const total = run.seed_count || 1;
+        const pctFmt = v => ((v/total)*100).toFixed(1) + '%';
+        $('sl-pct-inbox').textContent = pctFmt(counts.inbox);
+        $('sl-pct-inbox-n').textContent = `${counts.inbox}/${total}`;
+        $('sl-pct-promo').textContent = pctFmt(counts.promotions);
+        $('sl-pct-promo-n').textContent = `${counts.promotions}/${total}`;
+        $('sl-pct-spam').textContent = pctFmt(counts.spam);
+        $('sl-pct-spam-n').textContent = `${counts.spam}/${total}`;
+        $('sl-pct-deliv').textContent = pctFmt(run.delivered_count || 0);
+        $('sl-pct-deliv-n').textContent = `${run.delivered_count || 0}/${total}`;
+      } catch (e) {
+        $('sl-run-info').innerHTML = `<span class="error">${e.message}</span>`;
+      }
+    }
+
+    async function refreshHistory() {
+      try {
+        const { runs } = await api('/seed-test/history');
+        const body = $('sl-history-body');
+        body.innerHTML = '';
+        if (!runs || !runs.length) {
+          body.innerHTML = '<tr><td colspan="8" class="muted">—</td></tr>';
+          return;
+        }
+        for (const r of runs) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><b>${r.run_code}</b></td>
+            <td>${r.campaign_id}</td>
+            <td class="muted" style="max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.subject_line || ''}</td>
+            <td class="muted">${new Date(r.started_at).toLocaleDateString()}</td>
+            <td>${r.delivered_count || 0}/${r.seed_count || 0}</td>
+            <td>${r.inbox_count != null ? ((r.inbox_count/(r.seed_count||1))*100).toFixed(0)+'%' : '—'}</td>
+            <td>${r.promotions_count != null ? ((r.promotions_count/(r.seed_count||1))*100).toFixed(0)+'%' : '—'}</td>
+            <td>${r.spam_count != null ? ((r.spam_count/(r.seed_count||1))*100).toFixed(0)+'%' : '—'}</td>
+          `;
+          body.appendChild(tr);
+        }
+      } catch (e) {
+        console.warn('history:', e.message);
+      }
+    }
+
+    // ---- key mgmt ----
+    function promptKey() { $('sl-key-input').value = getKey(); openDialog('sl-key-dialog'); }
+    function saveKey() {
+      const v = $('sl-key-input').value.trim();
+      if (!v) { toast('Key cannot be empty', 'bad'); return; }
+      localStorage.setItem(KEY_STORAGE, v);
+      closeDialog('sl-key-dialog');
+      updateLock();
+      toast('Key saved', 'good');
+      refreshAll();
+    }
+
+    // ---- add/remove seeds ----
+    function bulkAdd() {
+      if (!hasKey()) return promptKey();
+      $('sl-bulk-input').value = '';
+      openDialog('sl-bulk-dialog');
+    }
+    async function submitBulk() {
+      const text = $('sl-bulk-input').value.trim();
+      if (!text) return;
+      try {
+        const { added } = await api('/seed-test/seed-bulk', { method:'POST', authed:true, body: JSON.stringify({ text }) });
+        closeDialog('sl-bulk-dialog');
+        toast(`Added ${added} seeds`, 'good');
+        refreshSeeds();
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+    function addOne() { if (!hasKey()) return promptKey(); $('sl-one-input').value = ''; openDialog('sl-one-dialog'); }
+    async function submitOne() {
+      const email = $('sl-one-input').value.trim();
+      if (!email) return;
+      try {
+        await api('/seed-test/seed', { method:'POST', authed:true, body: JSON.stringify({ email }) });
+        closeDialog('sl-one-dialog');
+        toast('Seed added', 'good');
+        refreshSeeds();
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+    async function removeSeed(email) {
+      if (!hasKey()) return promptKey();
+      if (!confirm(`Remove ${email}?`)) return;
+      try {
+        await api('/seed-test/seed/' + encodeURIComponent(email), { method:'DELETE', authed:true });
+        toast('Removed', 'good');
+        refreshSeeds();
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+
+    // ---- run test ----
+    async function run() {
+      if (!hasKey()) return promptKey();
+      const html_body = $('sl-html').value.trim();
+      const text_body = $('sl-text').value.trim();
+      const subject_line = $('sl-subject').value.trim();
+      const campaign_id = $('sl-campaign-id').value.trim();
+      const template_version = $('sl-template-version').value.trim();
+      if (!html_body || !text_body) { toast('HTML and text bodies required', 'bad'); return; }
+      if (!confirm(`Send test to all active seeds with subject: "${subject_line}"?`)) return;
+      $('sl-run-status').textContent = 'sending…';
+      try {
+        const r = await api('/seed-test/run', {
+          method:'POST', authed:true,
+          body: JSON.stringify({ campaign_id, template_version, subject_line, html_body, text_body })
+        });
+        $('sl-run-status').textContent = `${r.run_code} sent · ${r.delivered} delivered · ${r.bounced} bounced`;
+        toast(`${r.run_code} sent`, 'good');
+        refreshAll();
+      } catch (e) {
+        $('sl-run-status').innerHTML = `<span class="error">${e.message}</span>`;
+        toast(e.message, 'bad');
+      }
+    }
+
+    async function mark(seed_email, placement) {
+      if (!hasKey()) return promptKey();
+      if (!currentRun) return;
+      try {
+        await api('/seed-test/placement', {
+          method:'POST', authed:true,
+          body: JSON.stringify({ run_id: currentRun.id, seed_email, placement })
+        });
+        refreshStatus();
+      } catch (e) { toast(e.message, 'bad'); }
+    }
+
+    function openDialog(id) { $(id).classList.add('open'); }
+    function closeDialog(id) { $(id).classList.remove('open'); }
+
+    return { init, refreshAll, refreshSeeds, refreshStatus, refreshHistory, promptKey, saveKey, bulkAdd, submitBulk, addOne, submitOne, removeSeed, run, mark, openDialog, closeDialog };
+  })();
+  window.SeedLab = SeedLab;
 </script>
 </body>
 </html>
