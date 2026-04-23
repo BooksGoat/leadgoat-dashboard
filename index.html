@@ -75,9 +75,24 @@
   .placement-btn { padding:3px 8px; font-size:10px; font-weight:600; border-radius:4px; border:1px solid var(--line); background:#0f141b; color:var(--muted); cursor:pointer; letter-spacing:0.5px; }
   .placement-btn:hover { border-color:var(--accent); color:var(--txt); }
   .placement-btn.selected.inbox { background:rgba(53,208,127,.15); color:var(--good); border-color:var(--good); }
-  .placement-btn.selected.promotions { background:rgba(247,185,85,.15); color:var(--warn); border-color:var(--warn); }
+  .placement-btn.selected.promotions, .placement-btn.selected.promo { background:rgba(247,185,85,.15); color:var(--warn); border-color:var(--warn); }
   .placement-btn.selected.spam { background:rgba(239,68,68,.15); color:var(--bad); border-color:var(--bad); }
-  .placement-btn.selected.not_received { background:rgba(138,151,165,.15); color:var(--muted); border-color:var(--muted); }
+  .placement-btn.selected.not_received, .placement-btn.selected.none { background:rgba(138,151,165,.15); color:var(--muted); border-color:var(--muted); }
+  /* Daily-check helper row — big, finger-friendly buttons */
+  .dc-row { display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); }
+  .dc-row:last-child { border-bottom:none; }
+  .dc-email { font-family:ui-monospace,monospace; font-size:13px; }
+  .dc-email .prov { color:var(--muted); font-size:11px; margin-left:6px; }
+  .dc-row.done { opacity:0.55; }
+  .dc-btn { padding:8px 14px; font-size:12px; font-weight:700; border-radius:6px; border:1px solid var(--line); background:#0f141b; color:var(--muted); cursor:pointer; letter-spacing:0.5px; min-width:62px; }
+  .dc-btn:hover { border-color:var(--accent); color:var(--txt); }
+  .dc-btn.inbox.selected { background:rgba(53,208,127,.2); color:var(--good); border-color:var(--good); }
+  .dc-btn.promo.selected { background:rgba(247,185,85,.2); color:var(--warn); border-color:var(--warn); }
+  .dc-btn.spam.selected  { background:rgba(239,68,68,.2); color:var(--bad); border-color:var(--bad); }
+  .dc-btn.none.selected  { background:rgba(138,151,165,.2); color:var(--muted); border-color:var(--muted); }
+  .dc-open { padding:6px 10px; font-size:11px; }
+  .dc-progress { height:6px; background:#0f141b; border-radius:3px; overflow:hidden; margin-bottom:10px; border:1px solid var(--line); }
+  .dc-progress .fill { height:100%; background:var(--good); transition:width 0.3s; }
   .run-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
   .field-label { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:600; }
   .dialog-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:50; }
@@ -204,10 +219,29 @@
     </div>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>Email</th><th>Provider</th><th>Added</th><th></th></tr></thead>
-        <tbody id="sl-seeds-body"><tr><td colspan="4" class="muted">loading…</td></tr></tbody>
+        <thead><tr><th>Email</th><th>Provider</th><th>Pw</th><th>Added by</th><th>Added</th><th></th></tr></thead>
+        <tbody id="sl-seeds-body"><tr><td colspan="6" class="muted">loading…</td></tr></tbody>
       </table>
     </div>
+    <div class="hint">🔑 means the password is stored (encrypted). Click "Open inbox" to copy the password and open the provider login in a new tab.</div>
+  </section>
+
+  <!-- ================== DAILY CHECK (helper-friendly panel) ================== -->
+  <section class="panel" id="sl-daily-panel">
+    <h2>Daily Check <span class="badge" id="dc-run-badge">—</span></h2>
+    <div id="dc-run-info" style="margin-bottom:10px; font-size:12px; color:var(--muted);">No run to check yet.</div>
+    <div class="dc-progress"><div class="fill" id="dc-progress-fill" style="width:0%;"></div></div>
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+      <span class="muted" style="font-size:11px;">Checked by</span>
+      <input class="input" id="dc-checker" style="width:140px;" placeholder="Your name" />
+      <span class="muted" style="font-size:11px;" id="dc-counter">0/0 checked</span>
+      <span style="flex:1;"></span>
+      <button class="btn ghost btn-sm" onclick="SeedLab.refreshDaily()">Refresh</button>
+    </div>
+    <div id="dc-rows" style="border:1px solid var(--line); border-radius:8px; overflow:hidden;">
+      <div class="muted" style="padding:16px; text-align:center;">loading…</div>
+    </div>
+    <div class="hint">Helper workflow: 1) Click "Open" to jump to the inbox (password auto-copies). 2) Find today's email from BooksGoat. 3) Click the colour button where you found it. INBOX=green, PROMO=yellow, SPAM=red, NONE=grey. Row greys out when done.</div>
   </section>
 
   <section class="panel">
@@ -296,7 +330,19 @@
 <div class="dialog-backdrop" id="sl-one-dialog">
   <div class="dialog">
     <h3>Add one seed inbox</h3>
-    <input class="input" id="sl-one-input" placeholder="name@domain.com" />
+    <div style="margin-bottom:10px;">
+      <span class="field-label">Email</span>
+      <input class="input" id="sl-one-input" placeholder="name@domain.com" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <span class="field-label">Password <span class="muted" style="font-weight:400;">(stored encrypted — used for "Open inbox")</span></span>
+      <input class="input" id="sl-one-password" type="password" placeholder="mailbox password (optional)" autocomplete="new-password" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <span class="field-label">Added by <span class="muted" style="font-weight:400;">(helper's name)</span></span>
+      <input class="input" id="sl-one-created-by" placeholder="e.g. Priya" />
+    </div>
+    <div class="muted" style="font-size:11px;">Password is encrypted with AES-256-GCM before it hits the database. Leave blank if you're only adding the email for now.</div>
     <div class="dialog-actions">
       <button class="btn ghost" onclick="SeedLab.closeDialog('sl-one-dialog')">Cancel</button>
       <button class="btn primary" onclick="SeedLab.submitOne()">Add</button>
@@ -491,7 +537,43 @@
     }
 
     async function refreshAll() {
-      await Promise.allSettled([ refreshSeeds(), refreshStatus(), refreshHistory() ]);
+      await Promise.allSettled([ refreshSeeds(), refreshStatus(), refreshHistory(), refreshDaily() ]);
+    }
+
+    const PROVIDER_LOGIN_URL = {
+      gmail:   'https://mail.google.com/',
+      outlook: 'https://outlook.live.com/owa/',
+      yahoo:   'https://login.yahoo.com/',
+      zoho:    'https://mail.zoho.com/',
+      icloud:  'https://www.icloud.com/mail',
+      edu:     null,   // varies — let helper paste domain
+      corp:    null,
+    };
+
+    async function openInbox(id, email, provider) {
+      if (!hasKey()) return promptKey();
+      try {
+        const j = await api(`/seed-test/seed/${id}/password`, { authed:true });
+        try {
+          await navigator.clipboard.writeText(j.password || '');
+          toast(`Password for ${email} copied to clipboard`, 'good');
+        } catch (_) {
+          // fallback: old execCommand
+          const ta = document.createElement('textarea');
+          ta.value = j.password || '';
+          document.body.appendChild(ta);
+          ta.select(); document.execCommand('copy'); ta.remove();
+          toast(`Password copied (fallback) for ${email}`, 'good');
+        }
+        const url = PROVIDER_LOGIN_URL[provider];
+        if (url) {
+          window.open(url, '_blank', 'noopener');
+        } else {
+          toast(`No standard login URL for provider "${provider}" — paste the password manually.`, 'good');
+        }
+      } catch (e) {
+        toast('Open inbox failed: ' + e.message, 'bad');
+      }
     }
 
     async function refreshSeeds() {
@@ -501,15 +583,23 @@
         const body = $('sl-seeds-body');
         body.innerHTML = '';
         if (!seeds || !seeds.length) {
-          body.innerHTML = '<tr><td colspan="4" class="muted">No seeds added yet — click Bulk add to paste your list.</td></tr>';
+          body.innerHTML = '<tr><td colspan="6" class="muted">No seeds added yet — click Bulk add to paste your list.</td></tr>';
         } else {
           for (const s of seeds) {
             const tr = document.createElement('tr');
+            const openBtn = s.has_password
+              ? `<button class="btn btn-sm primary" onclick="SeedLab.openInbox(${s.id}, '${s.email}', '${s.provider}')">Open inbox</button>`
+              : `<span class="muted" style="font-size:11px;">no password</span>`;
             tr.innerHTML = `
               <td style="font-family:ui-monospace,monospace;">${s.email}</td>
               <td><span class="pill ${s.provider}">${s.provider}</span></td>
+              <td style="text-align:center;">${s.has_password ? '🔑' : '—'}</td>
+              <td class="muted" style="font-size:12px;">${s.added_by || '—'}</td>
               <td class="muted">${new Date(s.added_at).toLocaleDateString()}</td>
-              <td style="text-align:right;"><button class="btn btn-sm danger" onclick="SeedLab.removeSeed('${s.email}')">Remove</button></td>
+              <td style="text-align:right; white-space:nowrap;">
+                ${openBtn}
+                <button class="btn btn-sm danger" onclick="SeedLab.removeSeed('${s.email}')" style="margin-left:6px;">Remove</button>
+              </td>
             `;
             body.appendChild(tr);
           }
@@ -523,6 +613,113 @@
       } catch (e) {
         $('sl-seeds-status').innerHTML = `<span class="error">${e.message}</span>`;
       }
+    }
+
+    // ---- Daily Check (helper flow) ----
+    const CHECKER_STORAGE = 'leadgoat.dailyChecker';
+    async function refreshDaily() {
+      try {
+        const { run, rows } = await api('/seed-test/daily-check/today');
+        currentRun = run || currentRun;
+        const rowsEl = $('dc-rows');
+        const info   = $('dc-run-info');
+        const badge  = $('dc-run-badge');
+        if (!run) {
+          badge.textContent = '—';
+          info.textContent = 'No seed-test run yet. Run the test first, then the helper can start checking tomorrow morning.';
+          rowsEl.innerHTML = '<div class="muted" style="padding:16px; text-align:center;">—</div>';
+          $('dc-counter').textContent = '0/0 checked';
+          $('dc-progress-fill').style.width = '0%';
+          return;
+        }
+        badge.textContent = run.run_code;
+        const startedAge = Math.round((Date.now() - new Date(run.started_at).getTime()) / 3600000);
+        info.textContent = `${run.run_code} — sent ${startedAge < 48 ? startedAge + ' hours ago' : new Date(run.started_at).toLocaleDateString()}. Subject: "${run.subject_line}"`;
+
+        rowsEl.innerHTML = '';
+        if (!rows.length) {
+          rowsEl.innerHTML = '<div class="muted" style="padding:16px; text-align:center;">No seed inboxes yet — add some above.</div>';
+          return;
+        }
+        const saved = $('dc-checker');
+        if (!saved.value) saved.value = localStorage.getItem(CHECKER_STORAGE) || '';
+
+        let done = 0;
+        for (const r of rows) {
+          const done_ = !!r.check;
+          if (done_) done++;
+          const pl = r.check?.placement || null;
+          const openBtn = r.has_password
+            ? `<button class="btn dc-open primary" onclick="SeedLab.openInbox(${r.inbox_id}, '${r.email}', '${r.provider}')">Open</button>`
+            : `<span class="muted" style="font-size:10px;">no pw</span>`;
+          const row = document.createElement('div');
+          row.className = 'dc-row' + (done_ ? ' done' : '');
+          row.innerHTML = `
+            <div class="dc-email">${r.email}<span class="prov">${r.provider}${r.added_by ? ' · ' + r.added_by : ''}</span></div>
+            <div>${openBtn}</div>
+            <div style="display:flex; gap:6px;">
+              ${['inbox','promo','spam','none'].map(x =>
+                `<button class="dc-btn ${x} ${pl === x ? 'selected' : ''}" onclick="SeedLab.dcMark(${r.inbox_id},'${x}',this)">${x.toUpperCase()}</button>`
+              ).join('')}
+            </div>
+          `;
+          rowsEl.appendChild(row);
+        }
+        $('dc-counter').textContent = `${done}/${rows.length} checked`;
+        $('dc-progress-fill').style.width = rows.length ? ((done/rows.length)*100) + '%' : '0%';
+      } catch (e) {
+        $('dc-rows').innerHTML = `<div class="error" style="margin:12px;">${e.message}</div>`;
+      }
+    }
+
+    async function dcMark(inbox_id, placement, btn) {
+      if (!hasKey()) return promptKey();
+      try {
+        const run = currentRun;
+        if (!run) { toast('No current run', 'bad'); return; }
+        const checker = $('dc-checker').value.trim();
+        if (checker) localStorage.setItem(CHECKER_STORAGE, checker);
+        await api('/seed-test/daily-check', {
+          method:'POST', authed:true,
+          body: JSON.stringify({
+            run_id: run.id, inbox_id, placement,
+            checked_by: checker || null
+          })
+        });
+        // optimistic UI: mark row done, highlight this button
+        const row = btn.closest('.dc-row');
+        if (row) {
+          row.classList.add('done');
+          row.querySelectorAll('.dc-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+        }
+        // update counter + advance focus to next undone row
+        const allRows = [...document.querySelectorAll('#dc-rows .dc-row')];
+        const doneCnt = allRows.filter(r => r.classList.contains('done')).length;
+        $('dc-counter').textContent = `${doneCnt}/${allRows.length} checked`;
+        $('dc-progress-fill').style.width = ((doneCnt/allRows.length)*100) + '%';
+        const next = allRows.find(r => !r.classList.contains('done'));
+        if (next) next.scrollIntoView({ behavior:'smooth', block:'center' });
+        // refresh summary KPIs in background
+        refreshRunSummary();
+      } catch (e) {
+        toast('Save failed: ' + e.message, 'bad');
+      }
+    }
+
+    async function refreshRunSummary() {
+      try {
+        const { summary } = await api('/seed-test/run-summary');
+        if (!summary) return;
+        const total = summary.total_checked || 0;
+        const fmtPct = v => total ? ((v/total)*100).toFixed(1) + '%' : '—';
+        $('sl-pct-inbox').textContent     = fmtPct(summary.inbox_count);
+        $('sl-pct-inbox-n').textContent   = `${summary.inbox_count || 0}/${total}`;
+        $('sl-pct-promo').textContent     = fmtPct(summary.promo_count);
+        $('sl-pct-promo-n').textContent   = `${summary.promo_count || 0}/${total}`;
+        $('sl-pct-spam').textContent      = fmtPct(summary.spam_count);
+        $('sl-pct-spam-n').textContent    = `${summary.spam_count || 0}/${total}`;
+      } catch (_) { /* non-fatal */ }
     }
 
     async function refreshStatus() {
@@ -634,15 +831,29 @@
         refreshSeeds();
       } catch (e) { toast(e.message, 'bad'); }
     }
-    function addOne() { if (!hasKey()) return promptKey(); $('sl-one-input').value = ''; openDialog('sl-one-dialog'); }
+    function addOne() {
+      if (!hasKey()) return promptKey();
+      $('sl-one-input').value = '';
+      $('sl-one-password').value = '';
+      const saved = localStorage.getItem(CHECKER_STORAGE) || '';
+      $('sl-one-created-by').value = saved;
+      openDialog('sl-one-dialog');
+    }
     async function submitOne() {
       const email = $('sl-one-input').value.trim();
+      const password = $('sl-one-password').value;       // don't trim — allow intentional spaces
+      const added_by = $('sl-one-created-by').value.trim();
       if (!email) return;
       try {
-        await api('/seed-test/seed', { method:'POST', authed:true, body: JSON.stringify({ email }) });
+        await api('/seed-test/seed', {
+          method:'POST', authed:true,
+          body: JSON.stringify({ email, password: password || null, added_by: added_by || null })
+        });
+        if (added_by) localStorage.setItem(CHECKER_STORAGE, added_by);
         closeDialog('sl-one-dialog');
-        toast('Seed added', 'good');
+        toast(password ? 'Seed + password saved' : 'Seed added', 'good');
         refreshSeeds();
+        refreshDaily();
       } catch (e) { toast(e.message, 'bad'); }
     }
     async function removeSeed(email) {
@@ -695,7 +906,12 @@
     function openDialog(id) { $(id).classList.add('open'); }
     function closeDialog(id) { $(id).classList.remove('open'); }
 
-    return { init, refreshAll, refreshSeeds, refreshStatus, refreshHistory, promptKey, saveKey, bulkAdd, submitBulk, addOne, submitOne, removeSeed, run, mark, openDialog, closeDialog };
+    return {
+      init, refreshAll, refreshSeeds, refreshStatus, refreshHistory, refreshDaily,
+      promptKey, saveKey, bulkAdd, submitBulk, addOne, submitOne, removeSeed,
+      run, mark, dcMark, openInbox, refreshRunSummary,
+      openDialog, closeDialog
+    };
   })();
   window.SeedLab = SeedLab;
 </script>
