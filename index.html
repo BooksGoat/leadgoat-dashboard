@@ -588,7 +588,7 @@
           for (const s of seeds) {
             const tr = document.createElement('tr');
             const openBtn = s.has_password
-              ? `<button class="btn btn-sm primary" onclick="SeedLab.openInbox(${s.id}, '${s.email}', '${s.provider}')">Open inbox</button>`
+              ? `<button class="btn btn-sm primary" onclick="SeedLab.openInbox('${s.id}', '${s.email}', '${s.provider}')">Open inbox</button>`
               : `<span class="muted" style="font-size:11px;">no password</span>`;
             tr.innerHTML = `
               <td style="font-family:ui-monospace,monospace;">${s.email}</td>
@@ -650,7 +650,7 @@
           if (done_) done++;
           const pl = r.check?.placement || null;
           const openBtn = r.has_password
-            ? `<button class="btn dc-open primary" onclick="SeedLab.openInbox(${r.inbox_id}, '${r.email}', '${r.provider}')">Open</button>`
+            ? `<button class="btn dc-open primary" onclick="SeedLab.openInbox('${r.inbox_id}', '${r.email}', '${r.provider}')">Open</button>`
             : `<span class="muted" style="font-size:10px;">no pw</span>`;
           const row = document.createElement('div');
           row.className = 'dc-row' + (done_ ? ' done' : '');
@@ -659,7 +659,7 @@
             <div>${openBtn}</div>
             <div style="display:flex; gap:6px;">
               ${['inbox','promo','spam','none'].map(x =>
-                `<button class="dc-btn ${x} ${pl === x ? 'selected' : ''}" onclick="SeedLab.dcMark(${r.inbox_id},'${x}',this)">${x.toUpperCase()}</button>`
+                `<button class="dc-btn ${x} ${pl === x ? 'selected' : ''}" onclick="SeedLab.dcMark('${r.inbox_id}','${x}',this)">${x.toUpperCase()}</button>`
               ).join('')}
             </div>
           `;
